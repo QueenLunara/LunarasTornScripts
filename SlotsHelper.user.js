@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Slots Helper
 // @namespace    QueenLunara.Slots
-// @version      1.4
+// @version      1.5
 // @description  An Advanced version of older Torn Fast Slot scripts, made for Bulk Slots.
 // @author       Queen_Lunara [3408686]
 // @license      MIT
@@ -20,8 +20,8 @@
     const debug = true; // When toggled true, shows debug messages in the console! Good for Devs <3
     const validStakes = [10, 100, 1000, 10000, 100000, 1000000, 10000000];
 
-    let freeRollEnabled = false; // When toggled on, will automatically identify the maximum money to token amount, and roll until you run out of either! <3
-    
+    const freeRollEnabled = true; // Set this to `true` for Free Roll mode, or `false` for custom stakes
+
     let tokensAvailable = 0;
     let requestsSent = 0;
     let allResponses = [];
@@ -122,6 +122,7 @@
         if (freeRollEnabled) {
             validStake = getMaxAffordableStake();
             numberOfRequests = tokensAvailable;
+            alert(`Free Roll Enabled: Rolling at maximum stake ($${validStake}) until tokens or money runs out.`);
         } else {
             customStake = parseInt(prompt('Enter your desired stake (e.g., 500):'), 10);
 
@@ -164,28 +165,6 @@
         }, 3000);
     }
 
-    function toggleFreeRoll() {
-        freeRollEnabled = !freeRollEnabled;
-        alert(`Free Roll ${freeRollEnabled ? 'Enabled' : 'Disabled'}`);
-    }
-
-    function addUI() {
-        const button = document.createElement('button');
-        button.innerText = 'Toggle Free Roll';
-        button.style.position = 'fixed';
-        button.style.top = '10px';
-        button.style.right = '10px';
-        button.style.zIndex = 1000;
-        button.style.padding = '10px';
-        button.style.backgroundColor = '#007bff';
-        button.style.color = '#fff';
-        button.style.border = 'none';
-        button.style.borderRadius = '5px';
-        button.style.cursor = 'pointer';
-        button.onclick = toggleFreeRoll;
-        document.body.appendChild(button);
-    }
-
     const originalAjax = $.ajax;
 
     $.ajax = function (options) {
@@ -193,7 +172,6 @@
             if (!requestUrl) {
                 requestUrl = options.url;
                 alert('URL captured. Please manually roll the slots once to proceed.');
-                addUI();
             }
 
             const originalSuccess = options.success;
