@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Slots Helper
 // @namespace    QueenLunara.Slots
-// @version      1.7
+// @version      1.8
 // @description  An Advanced version of older Torn Fast Slot scripts, made for Bulk Slots.
 // @author       Queen_Lunara [3408686]
 // @license      MIT
@@ -20,7 +20,7 @@
     const debug = true; // When toggled true, shows debug messages in the console! Good for Devs <3
     const validStakes = [10, 100, 1000, 10000, 100000, 1000000, 10000000];
 
-    const freeRollEnabled = false; // Set this to `true` for Free Roll mode, or `false` for custom stakes (Risky!!!)
+    const freeRollEnabled = true; // Set this to `true` for Free Roll mode, or `false` for custom stakes
 
     let tokensAvailable = 0;
     let requestsSent = 0;
@@ -38,14 +38,6 @@
         const moneyElement = document.getElementById('user-money');
         if (moneyElement) {
             return parseInt(moneyElement.getAttribute('data-money').replace(/,/g, ''), 10);
-        }
-        return 0;
-    }
-
-    function getTokens() {
-        const tokensElement = document.getElementById('tokens');
-        if (tokensElement) {
-            return parseInt(tokensElement.innerText, 10);
         }
         return 0;
     }
@@ -83,29 +75,25 @@
                 if (debug) {
                     console.log('Request Successful:', data);
                 }
-
-                if (requestsSent === 0) {
-                    tokensAvailable = data.tokens;
-                    if (tokensAvailable < numberOfRequests) {
-                        const confirmContinue = confirm(`You only have ${tokensAvailable} tokens. Do you want to finish the remaining ${tokensAvailable} requests and cancel the rest?`);
-                        if (!confirmContinue) {
-                            return;
-                        }
-                        requestsSent = tokensAvailable;
+                tokensAvailable = data.tokens;
+                if (requestsSent === 0 && tokensAvailable < numberOfRequests) {
+                    const confirmContinue = confirm(`You only have ${tokensAvailable} tokens. Do you want to finish the remaining ${tokensAvailable} requests and cancel the rest?`);
+                    if (!confirmContinue) {
+                        return;
                     }
+                    numberOfRequests = tokensAvailable;
                 }
 
-                tokensAvailable = data.tokens;
                 requestsSent++;
+                totalTokensSpent++;
 
                 allResponses.push(data);
-                totalTokensSpent++;
                 if (data.won === 1) {
                     totalTimesWon++;
                     totalAmountWon += data.moneyWon;
                 }
 
-                if (requestsSent >= numberOfRequests || requestsSent >= tokensAvailable || getUserMoney() < validStake) {
+                if (requestsSent >= numberOfRequests || tokensAvailable <= 0 || getUserMoney() < validStake) {
                     logSummary();
                 }
             },
@@ -180,7 +168,6 @@
         if (options.data?.sid === 'slotsData' && options.data?.step === 'play') {
             if (!requestUrl) {
                 requestUrl = options.url;
-                tokensAvailable = getTokens();
                 alert('URL captured. Please manually roll the slots once to proceed.');
             }
 
