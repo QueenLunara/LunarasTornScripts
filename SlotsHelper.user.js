@@ -2,7 +2,7 @@
 // @name         Torn Slots Helper
 // @namespace    QueenLunara.Slots
 // @version      1.9
-// @description  An Advanced version of older Torn Fast Slot scripts, made for Bulk Slots.
+// @description  An Advanced version of older Torn Fast Slot scripts.
 // @author       Queen_Lunara [3408686]
 // @license      MIT
 // @match        https://www.torn.com/loader.php?sid=slots
@@ -20,7 +20,7 @@
     const debug = true;
     const validStakes = [10, 100, 1000, 10000, 100000, 1000000, 10000000];
 
-    let defaultFastMode = false;
+    let defaultFastMode = true;
     let presetBetMode = false;
     let freeRollMode = false;
 
