@@ -9,8 +9,9 @@
 // @match        https://www.torn.com/page.php?sid=slots
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=torn.com
 // @run-at       document-idle
-// @update-url   
 // @grant        none
+// @downloadURL  https://github.com/QueenLunara/LunarasTornScripts/raw/main/SlotsHelper.user.js
+// @updateURL    https://github.com/QueenLunara/LunarasTornScripts/raw/main/SlotsHelper.user.js
 // ==/UserScript==
 
 (function () {
