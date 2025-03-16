@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Slots Helper
 // @namespace    QueenLunara.Slots
-// @version      1.5
+// @version      1.6
 // @description  An Advanced version of older Torn Fast Slot scripts, made for Bulk Slots.
 // @author       Queen_Lunara [3408686]
 // @license      MIT
