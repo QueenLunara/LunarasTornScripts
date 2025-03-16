@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Slots Helper
 // @namespace    QueenLunara.Slots
-// @version      1.2
+// @version      1.3
 // @description  An Advanced version of older Torn Fast Slot scripts, made for Bulk Slots.
 // @author       Queen_Lunara [3408686]
 // @license      MIT
@@ -9,6 +9,7 @@
 // @match        https://www.torn.com/page.php?sid=slots
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=torn.com
 // @run-at       document-idle
+// @update-url   
 // @grant        none
 // ==/UserScript==
 
@@ -18,30 +19,6 @@
     const debug = true;
     const validStakes = [10, 100, 1000, 10000, 100000, 1000000, 10000000];
 
-    const customStake = parseInt(prompt('Enter your desired stake (e.g., 500):'), 10);
-
-    if (isNaN(customStake)) {
-        alert('Invalid stake. Please enter a valid number.');
-        return;
-    }
-
-    let validStake = validStakes
-        .filter(stake => stake <= customStake)
-        .reduce((max, stake) => Math.max(max, stake), 0);
-
-    if (!validStake) {
-        alert('The desired stake is too small. Please enter a larger number.');
-        return;
-    }
-
-    const numberOfRequests = Math.ceil(customStake / validStake);
-
-    if (debug) {
-        console.log(`Desired Stake: ${customStake}`);
-        console.log(`Valid Stake: ${validStake}`);
-        console.log(`Number of Requests: ${numberOfRequests}`);
-    }
-
     let tokensAvailable = 0;
     let requestsSent = 0;
     let allResponses = [];
@@ -50,6 +27,9 @@
     let totalAmountWon = 0;
     let requestUrl = null;
     let firstManualRollCompleted = false;
+    let customStake = null;
+    let validStake = null;
+    let numberOfRequests = null;
 
     function getUserMoney() {
         const moneyElement = document.getElementById('user-money');
@@ -127,13 +107,54 @@
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    function initializeStake() {
+        customStake = parseInt(prompt('Enter your desired stake (e.g., 500):'), 10);
+
+        if (isNaN(customStake)) {
+            alert('Invalid stake. Please enter a valid number.');
+            return;
+        }
+
+        validStake = validStakes
+            .filter(stake => stake <= customStake)
+            .reduce((max, stake) => Math.max(max, stake), 0);
+
+        if (!validStake) {
+            alert('The desired stake is too small. Please enter a larger number.');
+            return;
+        }
+
+        numberOfRequests = Math.ceil(customStake / validStake);
+
+        if (debug) {
+            console.log(`Desired Stake: ${customStake}`);
+            console.log(`Valid Stake: ${validStake}`);
+            console.log(`Number of Requests: ${numberOfRequests}`);
+        }
+
+        setTimeout(() => {
+            (async function () {
+                for (let i = 0; i < numberOfRequests; i++) {
+                    if (getUserMoney() < validStake) {
+                        alert(`You don't have enough money to continue. Stopping after ${requestsSent} rolls.`);
+                        logSummary();
+                        break;
+                    }
+                    sendRequest(validStake);
+                    const randomWait = Math.floor(Math.random() * 1000) + 500;
+                    await wait(randomWait);
+                }
+            })();
+        }, 3000);
+    }
+
     const originalAjax = $.ajax;
 
     $.ajax = function (options) {
         if (options.data?.sid === 'slotsData' && options.data?.step === 'play') {
             if (!requestUrl) {
                 requestUrl = options.url;
-                alert('URL captured. Starting automated requests...');
+                alert('URL captured. Please manually roll the slots once to proceed.');
             }
 
             const originalSuccess = options.success;
@@ -143,20 +164,7 @@
 
                 if (!firstManualRollCompleted) {
                     firstManualRollCompleted = true;
-                    setTimeout(() => {
-                        (async function () {
-                            for (let i = 0; i < numberOfRequests; i++) {
-                                if (getUserMoney() < validStake) {
-                                    alert(`You don't have enough money to continue. Stopping after ${requestsSent} rolls.`);
-                                    logSummary();
-                                    break;
-                                }
-                                sendRequest(validStake);
-                                const randomWait = Math.floor(Math.random() * 1000) + 500;
-                                await wait(randomWait);
-                            }
-                        })();
-                    }, 3000);
+                    initializeStake();
                 }
             };
         }
