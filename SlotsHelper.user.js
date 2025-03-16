@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Slots Helper
 // @namespace    QueenLunara.Slots
-// @version      1.6
+// @version      1.7
 // @description  An Advanced version of older Torn Fast Slot scripts, made for Bulk Slots.
 // @author       Queen_Lunara [3408686]
 // @license      MIT
@@ -38,6 +38,14 @@
         const moneyElement = document.getElementById('user-money');
         if (moneyElement) {
             return parseInt(moneyElement.getAttribute('data-money').replace(/,/g, ''), 10);
+        }
+        return 0;
+    }
+
+    function getTokens() {
+        const tokensElement = document.getElementById('tokens');
+        if (tokensElement) {
+            return parseInt(tokensElement.innerText, 10);
         }
         return 0;
     }
@@ -87,7 +95,7 @@
                     }
                 }
 
-                tokensAvailable--;
+                tokensAvailable = data.tokens;
                 requestsSent++;
 
                 allResponses.push(data);
@@ -121,6 +129,7 @@
     function initializeStake() {
         if (freeRollEnabled) {
             validStake = getMaxAffordableStake();
+            customStake = validStake;
             numberOfRequests = tokensAvailable;
             alert(`Free Roll Enabled: Rolling at maximum stake ($${validStake}) until tokens or money runs out.`);
         } else {
@@ -171,6 +180,7 @@
         if (options.data?.sid === 'slotsData' && options.data?.step === 'play') {
             if (!requestUrl) {
                 requestUrl = options.url;
+                tokensAvailable = getTokens();
                 alert('URL captured. Please manually roll the slots once to proceed.');
             }
 
@@ -181,6 +191,13 @@
 
                 if (!firstManualRollCompleted) {
                     firstManualRollCompleted = true;
+                    tokensAvailable = data.tokens;
+                    requestsSent++;
+                    totalTokensSpent++;
+                    if (data.won === 1) {
+                        totalTimesWon++;
+                        totalAmountWon += data.moneyWon;
+                    }
                     initializeStake();
                 }
             };
