@@ -20,7 +20,7 @@
     const debug = true; // When toggled true, shows debug messages in the console! Good for Devs <3
     const validStakes = [10, 100, 1000, 10000, 100000, 1000000, 10000000];
 
-    const freeRollEnabled = true; // Set this to `true` for Free Roll mode, or `false` for custom stakes
+    const freeRollEnabled = false; // Set this to `true` for Free Roll mode, or `false` for custom stakes (Risky!!!)
 
     let tokensAvailable = 0;
     let requestsSent = 0;
