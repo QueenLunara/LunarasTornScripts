@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Slots Helper
 // @namespace    QueenLunara.Slots
-// @version      1.3
+// @version      1.4
 // @description  An Advanced version of older Torn Fast Slot scripts, made for Bulk Slots.
 // @author       Queen_Lunara [3408686]
 // @license      MIT
@@ -17,9 +17,11 @@
 (function () {
     'use strict';
 
-    const debug = true;
+    const debug = true; // When toggled true, shows debug messages in the console! Good for Devs <3
     const validStakes = [10, 100, 1000, 10000, 100000, 1000000, 10000000];
 
+    let freeRollEnabled = false; // When toggled on, will automatically identify the maximum money to token amount, and roll until you run out of either! <3
+    
     let tokensAvailable = 0;
     let requestsSent = 0;
     let allResponses = [];
@@ -38,6 +40,14 @@
             return parseInt(moneyElement.getAttribute('data-money').replace(/,/g, ''), 10);
         }
         return 0;
+    }
+
+    function getMaxAffordableStake() {
+        const currentMoney = getUserMoney();
+        const maxStake = validStakes
+            .filter(stake => stake <= currentMoney)
+            .reduce((max, stake) => Math.max(max, stake), 0);
+        return maxStake;
     }
 
     function sendRequest(stake) {
@@ -109,23 +119,28 @@
     }
 
     function initializeStake() {
-        customStake = parseInt(prompt('Enter your desired stake (e.g., 500):'), 10);
+        if (freeRollEnabled) {
+            validStake = getMaxAffordableStake();
+            numberOfRequests = tokensAvailable;
+        } else {
+            customStake = parseInt(prompt('Enter your desired stake (e.g., 500):'), 10);
 
-        if (isNaN(customStake)) {
-            alert('Invalid stake. Please enter a valid number.');
-            return;
+            if (isNaN(customStake)) {
+                alert('Invalid stake. Please enter a valid number.');
+                return;
+            }
+
+            validStake = validStakes
+                .filter(stake => stake <= customStake)
+                .reduce((max, stake) => Math.max(max, stake), 0);
+
+            if (!validStake) {
+                alert('The desired stake is too small. Please enter a larger number.');
+                return;
+            }
+
+            numberOfRequests = Math.ceil(customStake / validStake);
         }
-
-        validStake = validStakes
-            .filter(stake => stake <= customStake)
-            .reduce((max, stake) => Math.max(max, stake), 0);
-
-        if (!validStake) {
-            alert('The desired stake is too small. Please enter a larger number.');
-            return;
-        }
-
-        numberOfRequests = Math.ceil(customStake / validStake);
 
         if (debug) {
             console.log(`Desired Stake: ${customStake}`);
@@ -149,6 +164,28 @@
         }, 3000);
     }
 
+    function toggleFreeRoll() {
+        freeRollEnabled = !freeRollEnabled;
+        alert(`Free Roll ${freeRollEnabled ? 'Enabled' : 'Disabled'}`);
+    }
+
+    function addUI() {
+        const button = document.createElement('button');
+        button.innerText = 'Toggle Free Roll';
+        button.style.position = 'fixed';
+        button.style.top = '10px';
+        button.style.right = '10px';
+        button.style.zIndex = 1000;
+        button.style.padding = '10px';
+        button.style.backgroundColor = '#007bff';
+        button.style.color = '#fff';
+        button.style.border = 'none';
+        button.style.borderRadius = '5px';
+        button.style.cursor = 'pointer';
+        button.onclick = toggleFreeRoll;
+        document.body.appendChild(button);
+    }
+
     const originalAjax = $.ajax;
 
     $.ajax = function (options) {
@@ -156,6 +193,7 @@
             if (!requestUrl) {
                 requestUrl = options.url;
                 alert('URL captured. Please manually roll the slots once to proceed.');
+                addUI();
             }
 
             const originalSuccess = options.success;
