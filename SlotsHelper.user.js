@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Slots Helper
 // @namespace    QueenLunara.Slots
-// @version      1.8
+// @version      1.9
 // @description  An Advanced version of older Torn Fast Slot scripts, made for Bulk Slots.
 // @author       Queen_Lunara [3408686]
 // @license      MIT
@@ -17,11 +17,14 @@
 (function () {
     'use strict';
 
-    const debug = true; // When toggled true, shows debug messages in the console! Good for Devs <3
+    const debug = true;
     const validStakes = [10, 100, 1000, 10000, 100000, 1000000, 10000000];
 
-    const freeRollEnabled = true; // Set this to `true` for Free Roll mode, or `false` for custom stakes
+    let defaultFastMode = false;
+    let presetBetMode = false;
+    let freeRollMode = false;
 
+    let presetBetAmount = null;
     let tokensAvailable = 0;
     let requestsSent = 0;
     let allResponses = [];
@@ -30,9 +33,6 @@
     let totalAmountWon = 0;
     let requestUrl = null;
     let firstManualRollCompleted = false;
-    let customStake = null;
-    let validStake = null;
-    let numberOfRequests = null;
 
     function getUserMoney() {
         const moneyElement = document.getElementById('user-money');
@@ -50,16 +50,57 @@
         return maxStake;
     }
 
-    function sendRequest(stake) {
-        if (!requestUrl) {
-            alert('Please manually spin the slots once to initialize the script.');
+    function logSummary() {
+        console.log('All Responses:', allResponses);
+        alert(`Summary:\nTokens Spent: ${totalTokensSpent}\nTimes Won: ${totalTimesWon}\nAmount Won: $${totalAmountWon}\nRemaining Money: $${getUserMoney().toLocaleString()}`);
+    }
+
+    function wait(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function modifyBetButtons() {
+        const betButtons = document.querySelectorAll('.slots-controls .bet-button');
+        if (!betButtons.length) {
+            if (debug) console.log('Bet buttons not found. Retrying in 1 second...');
+            setTimeout(modifyBetButtons, 1000);
             return;
         }
 
+        betButtons.forEach(button => {
+            button.removeEventListener('click', handleBetButtonClick);
+            button.addEventListener('click', handleBetButtonClick);
+        });
+    }
+
+    function handleBetButtonClick(event) {
+        if (!defaultFastMode && !presetBetMode && !freeRollMode) return;
+
         const currentMoney = getUserMoney();
-        if (currentMoney < stake) {
-            alert(`You don't have enough money to continue. Stopping after ${requestsSent} rolls.`);
-            logSummary();
+        let stake = null;
+
+        if (defaultFastMode) {
+            stake = parseInt(event.target.getAttribute('data-stake'), 10);
+        } else if (presetBetMode) {
+            if (!presetBetAmount) {
+                alert('Preset Bet mode is active, but no bet amount is set. Please set a bet amount.');
+                return;
+            }
+            stake = presetBetAmount;
+        } else if (freeRollMode) {
+            stake = getMaxAffordableStake();
+        }
+
+        if (stake && currentMoney >= stake) {
+            sendRequest(stake);
+        } else {
+            alert(`You don't have enough money to bet $${stake}.`);
+        }
+    }
+
+    function sendRequest(stake) {
+        if (!requestUrl) {
+            alert('Please manually spin the slots once to initialize the script.');
             return;
         }
 
@@ -76,14 +117,6 @@
                     console.log('Request Successful:', data);
                 }
                 tokensAvailable = data.tokens;
-                if (requestsSent === 0 && tokensAvailable < numberOfRequests) {
-                    const confirmContinue = confirm(`You only have ${tokensAvailable} tokens. Do you want to finish the remaining ${tokensAvailable} requests and cancel the rest?`);
-                    if (!confirmContinue) {
-                        return;
-                    }
-                    numberOfRequests = tokensAvailable;
-                }
-
                 requestsSent++;
                 totalTokensSpent++;
 
@@ -93,7 +126,7 @@
                     totalAmountWon += data.moneyWon;
                 }
 
-                if (requestsSent >= numberOfRequests || tokensAvailable <= 0 || getUserMoney() < validStake) {
+                if (tokensAvailable <= 0 || getUserMoney() < stake) {
                     logSummary();
                 }
             },
@@ -105,65 +138,31 @@
         });
     }
 
-    function logSummary() {
-        console.log('All Responses:', allResponses);
-        alert(`Summary:\nTokens Spent: ${totalTokensSpent}\nTimes Won: ${totalTimesWon}\nAmount Won: $${totalAmountWon}\nRemaining Money: $${getUserMoney().toLocaleString()}`);
-    }
-
-    function wait(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    function initializeStake() {
-        if (freeRollEnabled) {
-            validStake = getMaxAffordableStake();
-            customStake = validStake;
-            numberOfRequests = tokensAvailable;
-            alert(`Free Roll Enabled: Rolling at maximum stake ($${validStake}) until tokens or money runs out.`);
+    function initializeScript() {
+        const mode = prompt('Select mode:\n1. Default Fast\n2. Preset Bet\n3. Free Roll');
+        if (mode === '1') {
+            defaultFastMode = true;
+            alert('Default Fast mode activated. Cooldown removed. Click the bet buttons to spin quickly.');
+        } else if (mode === '2') {
+            presetBetMode = true;
+            presetBetAmount = parseInt(prompt('Enter your desired bet amount:'), 10);
+            if (isNaN(presetBetAmount)) {
+                alert('Invalid bet amount. Please reload the page and try again.');
+                return;
+            }
+            alert(`Preset Bet mode activated. Your bet amount is set to $${presetBetAmount}. Click the bet buttons to spin.`);
+        } else if (mode === '3') {
+            freeRollMode = true;
+            alert('Free Roll mode activated. The script will calculate the highest safe bet for each spin. Click the bet buttons to spin.');
         } else {
-            customStake = parseInt(prompt('Enter your desired stake (e.g., 500):'), 10);
-
-            if (isNaN(customStake)) {
-                alert('Invalid stake. Please enter a valid number.');
-                return;
-            }
-
-            validStake = validStakes
-                .filter(stake => stake <= customStake)
-                .reduce((max, stake) => Math.max(max, stake), 0);
-
-            if (!validStake) {
-                alert('The desired stake is too small. Please enter a larger number.');
-                return;
-            }
-
-            numberOfRequests = Math.ceil(customStake / validStake);
+            alert('Invalid mode selected. Please reload the page and try again.');
+            return;
         }
 
-        if (debug) {
-            console.log(`Desired Stake: ${customStake}`);
-            console.log(`Valid Stake: ${validStake}`);
-            console.log(`Number of Requests: ${numberOfRequests}`);
-        }
-
-        setTimeout(() => {
-            (async function () {
-                for (let i = 0; i < numberOfRequests; i++) {
-                    if (getUserMoney() < validStake) {
-                        alert(`You don't have enough money to continue. Stopping after ${requestsSent} rolls.`);
-                        logSummary();
-                        break;
-                    }
-                    sendRequest(validStake);
-                    const randomWait = Math.floor(Math.random() * 1000) + 500;
-                    await wait(randomWait);
-                }
-            })();
-        }, 3000);
+        modifyBetButtons();
     }
 
     const originalAjax = $.ajax;
-
     $.ajax = function (options) {
         if (options.data?.sid === 'slotsData' && options.data?.step === 'play') {
             if (!requestUrl) {
@@ -179,13 +178,7 @@
                 if (!firstManualRollCompleted) {
                     firstManualRollCompleted = true;
                     tokensAvailable = data.tokens;
-                    requestsSent++;
-                    totalTokensSpent++;
-                    if (data.won === 1) {
-                        totalTimesWon++;
-                        totalAmountWon += data.moneyWon;
-                    }
-                    initializeStake();
+                    initializeScript();
                 }
             };
         }
